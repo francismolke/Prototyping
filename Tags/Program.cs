@@ -14,14 +14,16 @@ namespace Tags
     {
         public static void Main(string[] args)
         {
-            //Program los = new Program();
-            //RunTags();
+            Program los = new Program();
+            string projektDatei = "SD290special.wlmp";
+            //string currentDirectory();
+            los.RunTags(projektDatei);
 
         }
 
         public void RunTags(string projektDatei)
         {
-            var currentDirectory = @"C:\Users\Agrre\Desktop\alte\InsertTitleOnVideo\GondoAssist_AutoVideo\bin\Debug\" + projektDatei;
+            var currentDirectory = @"C:\Users\Agrre\Desktop\alte\InsertTitleOnVideo\AutoModeLikeability\bin\Debug\" + projektDatei;
             int lastExtentRefNumber = 0;
 
 
@@ -128,17 +130,19 @@ namespace Tags
         {
             XDocument docY = XDocument.Load(currentDirectoryC);
 
-
+            string VmediaID = "";
             int n = 0;
             int idIterator = letzteZahl - 1 + amountOfMediaItems;
             int titleID = letzteZahl;
             string fileName = "";
+            int VmediaIDint = 0;
             while (n < amountOfMediaItems)
             {
                 idIterator--;
                 letzteZahl++;
                 // n + 1
-                if (n + 1 != amountOfMediaItems)
+                //   if (n + 1 != amountOfMediaItems)
+                if (n + 1 < amountOfMediaItems)
                 {
 
                     XElement doc = new XElement(
@@ -156,31 +160,37 @@ namespace Tags
                         media_ItemElement.Add(al.Attribute("mediaItemID").Value);
                     }
                     //  verpackt die erhaltenen daten in der schleife zugreifbare variablen
-                    string VmediaID = media_ItemElement.FirstOrDefault();
+                    VmediaID = media_ItemElement.FirstOrDefault();
+
+
+                    VmediaIDint = Int32.Parse(VmediaID);
 
 
 
-
-
-
-
+                    if (VmediaIDint != null)
+                    {
+                        fileName = getFileNameFromMediaItem(n, docY, VmediaIDint, currentDirectoryC);
+                    }
                     //getFileNameFromMediaItem(n, docY, reihenFolgeVideo);
-                    fileName = getFileNameFromMediaItem(n, docY, VmediaID, currentDirectoryC);
+
                 }
                 else
                 {
                     // eins zu wenig?
+
+                    fileName = getFileNameFromMediaItem(n, docY, VmediaIDint + 1, currentDirectoryC);
                 }
 
+                if (VmediaIDint != null)
+                {
+                    // Hier noch Prüfen ob das ein Instagram / Youtube etc Video ist
+                    string checkedFileName = CheckFileNameForSource(fileName);
+                    var docTitleClip = CreateTitleClipXElement(letzteZahl, checkedFileName, n, currentDirectoryC);
+                    docY.Root.Descendants("Extents").FirstOrDefault().AddFirst(docTitleClip);
 
-               // Hier noch Prüfen ob das ein Instagram / Youtube etc Video ist
-                string checkedFileName = CheckFileNameForSource(fileName);
-                var docTitleClip = CreateTitleClipXElement(letzteZahl, checkedFileName, n, currentDirectoryC);
-                docY.Root.Descendants("Extents").FirstOrDefault().AddFirst(docTitleClip);
 
-
-                docY.Save(currentDirectoryC);
-
+                    docY.Save(currentDirectoryC);
+                }
 
                 n++;
             }
@@ -196,13 +206,13 @@ namespace Tags
             lastExtentRefNumber = GetHighestIDNumber(lastExtentRefNumber, ExtentRefVideo, ExtentRefElementVideo);
             string reihenFolgeVideo = ExtentRefElementVideo.Skip(n).FirstOrDefault();
 
-            return reihenFolgeVideo; 
-          //  return Int32.Parse(reihenFolgeVideo);
+            return reihenFolgeVideo;
+            //  return Int32.Parse(reihenFolgeVideo);
         }
 
-        private static string getFileNameFromMediaItem(int n, XDocument doc, string reihenFolgeVideo, string currentDirectoryC)
+        private static string getFileNameFromMediaItem(int n, XDocument doc, int reihenFolgeVideo, string currentDirectoryC)
         {
-            IEnumerable<XElement> MediaFileName = from al in doc.Descendants("MediaItem") where (int)al.Attribute("id") == Int32.Parse(reihenFolgeVideo) select al;
+            IEnumerable<XElement> MediaFileName = from al in doc.Descendants("MediaItem") where (int)al.Attribute("id") == reihenFolgeVideo select al;
             IEnumerable<XElement> MediaFilePath = from el in MediaFileName.Descendants("MediaItem") where (string)el.Attribute("filePath") != null select el;
             List<string> MediaItemNameElement = new List<string>();
             foreach (XElement al in MediaFileName)
@@ -235,6 +245,7 @@ namespace Tags
 
             }
             {
+                fileName = fileName.Substring(0, fileName.Length - 4).Trim();
                 Console.WriteLine("was anderes");
                 return fileName;
             }
@@ -248,7 +259,7 @@ namespace Tags
         {
             idIterator -= 1;
             // var currentDirectory = Directory.GetCurrentDirectory() + @"\Slamdank1.wlmp";
-           // var currentDirectory = @"C:\Users\Agrre\Desktop\alte\InsertTitleOnVideo\GondoAssist_AutoVideo\bin\Debug\SD284.wlmp";
+            // var currentDirectory = @"C:\Users\Agrre\Desktop\alte\InsertTitleOnVideo\GondoAssist_AutoVideo\bin\Debug\SD284.wlmp";
 
             //  var currentDirectory = Directory.GetCurrentDirectory() + @"\SD2801.wlmp";
             XDocument doc = XDocument.Load(currentDirectory);
@@ -264,7 +275,7 @@ namespace Tags
                     new XElement("BoundPropertyFloatElement", new XAttribute("Value", 1)),
                     new XElement("BoundPropertyFloatElement", new XAttribute("Value", 1))),
                     new XElement("BoundPropertyStringSet", new XAttribute("Name", "family"),
-                    new XElement("BoundPropertyStringElement", new XAttribute("Value", "Rocket Rinder"))),
+                    new XElement("BoundPropertyStringElement", new XAttribute("Value", "Bahnschrift"))),
                     new XElement("BoundPropertyBool", new XAttribute("Name", "horizontal"), new XAttribute("Value", "true")),
                     new XElement("BoundPropertyStringSet", new XAttribute("Name", "justify"),
                     new XElement("BoundPropertyStringElement", new XAttribute("Value", "MIDDLE"))),
@@ -279,9 +290,9 @@ namespace Tags
                     new XElement("BoundPropertyFloatSet", new XAttribute("Name", "position"),
                     // HIER SIND DIE POSITIONSVALUES X Y Z
                     new XElement("BoundPropertyFloatElement", new XAttribute("Value", 3)),
-                    new XElement("BoundPropertyFloatElement", new XAttribute("Value", 3)),
-                    new XElement("BoundPropertyFloatElement", new XAttribute("Value", 3))),
-                    new XElement("BoundPropertyFloat", new XAttribute("Name", "size"), new XAttribute("Value", 0.5)),
+                    new XElement("BoundPropertyFloatElement", new XAttribute("Value", -2.1)),
+                    new XElement("BoundPropertyFloatElement", new XAttribute("Value", 0.02))),
+                    new XElement("BoundPropertyFloat", new XAttribute("Name", "size"), new XAttribute("Value", 0.4)),
                     new XElement("BoundPropertyStringSet", new XAttribute("Name", "string"),
                     // HIER IST DIE NAMENS / TEXT VARIABLE
                     new XElement("BoundPropertyStringElement", new XAttribute("Value", "@" + fileName))),

@@ -1,43 +1,193 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Xml;
 using System.Xml.Linq;
-using Tags;
+using MediaToolkit;
+using MediaToolkit.Model;
 
-namespace GondoAssist_AutoVideo
+namespace AutoModeLikeability
 {
     class Program
     {
         static void Main(string[] args)
         {
+            CreateBlankProjekt();
+        }
 
-            //GondoAssist_Tags.Program gat = new GondoAssist_Tags.Program();
-            
-            
+        private static Tuple<int, int> GetFramesizeOfVideos(string[] allvideos, int position)
+        {
+            //string[] allvideos = GetAllVideosFromFolder();
+            //int n = 0;
+            string swidth, sheight;
+            int width, height;
+            //while (n < allvideos.Length)
+            //{
+            var inputFile = new MediaFile { Filename = allvideos[position] };
+            using (var engine = new Engine())
+            {
+                engine.GetMetadata(inputFile);
+            }
+            //Console.WriteLine(inputFile.Metadata.VideoData.FrameSize);
+            var framesize = inputFile.Metadata.VideoData.FrameSize;
+            swidth = framesize.Substring(0, framesize.IndexOf("x")).TrimEnd();
+            sheight = framesize.Substring(framesize.IndexOf("x") + 1).Trim();
+            //}
+            width = Int32.Parse(swidth);
+            height = Int32.Parse(sheight);
+            return Tuple.Create(width, height);
+        }
 
-            
-           CreateBlankProjekt();
+        private static double GetDurationOfVideos(string[] filepath, int n)
+        {
+           // string[] allvideos = GetAllVideosFromFolder();
+            //int n = 0;
+            //while (n < allvideos.Length)
+            //{
+                //GondoAssist_Tags.Program gat = new GondoAssist_Tags.Program();
+                //   var inputFile = new MediaFile { Filename = @"C:\Users\Agrre\Desktop\testproject\_waifi_ - B8u7kJ7Fn8f.mp4" };
+                var inputFile = new MediaFile { Filename = filepath[n] };
+                double duration;
+                int minute = 0;
+                using (var engine = new Engine())
+                {
+                    engine.GetMetadata(inputFile);
+                }
+
+                //Console.WriteLine(inputFile.Metadata.Duration);
+                var mediaDuration = inputFile.Metadata.Duration;
+               // Console.WriteLine(inputFile.Metadata.VideoData.FrameSize);
+
+                string mediaDurationstring = mediaDuration.ToString();
+                if (mediaDurationstring.Substring(0, mediaDurationstring.IndexOf(":")).TrimEnd() == "00")
+                {
+                    mediaDurationstring = mediaDurationstring.Substring(3).Trim();
+
+                    if (mediaDurationstring.Substring(0, mediaDurationstring.IndexOf(":")).TrimEnd() == "00")
+                    {
+                        mediaDurationstring = mediaDurationstring.Substring(3).Trim();
+                    }
+                    else
+                    {
+                        var zwminute = mediaDurationstring.Substring(0, mediaDurationstring.IndexOf(":")).TrimEnd();
+                        minute = Int32.Parse(zwminute);
+                        mediaDurationstring = mediaDurationstring.Substring(3).TrimEnd();
+                    }
+                    if (mediaDurationstring.Substring(0).TrimEnd() != "00")
+                    {
+
+                        duration = double.Parse(mediaDurationstring, NumberStyles.AllowDecimalPoint, CultureInfo.CreateSpecificCulture("en-GB"));
+                        if (minute != 0)
+                        {
+                            minute = minute * 60;
+                            duration = Math.Round(duration + minute, 2);
+                            return duration;
+                        }
+                    }
+                    
+                }
+                else
+                {
+                    return double.Parse(mediaDurationstring);
+                }
+                // 00:00:08.1700000
+                //  CreateBlankProjekt();
+                n++;
+                return double.Parse(mediaDurationstring, NumberStyles.AllowDecimalPoint, CultureInfo.CreateSpecificCulture("en-GB"));
+
+            //}
+            //return 0.00;
+
+
 
         }
 
+        private static string[] GetLikeability()
+        {
+            string[] filePath = null;
+            SortedList<int, LikeabilityQuellen> slClips = new SortedList<int, LikeabilityQuellen>();
+            List<double> ld = new List<double>();
+            List<LikeabilityQuellen> lg = new List<LikeabilityQuellen>();
 
+            List<LikeabilityQuellen> lgg = new List<LikeabilityQuellen>();
+            //  using (StreamReader sr = new StreamReader("Quellen_Likeability.txt", Encoding.UTF8))
+            using (StreamReader sr = new StreamReader("Quellen_Likeability.txt", Encoding.UTF8))
+            {
+                string line;
+                string likestringValue;
+                double likeValue;
+
+                while ((line = sr.ReadLine()) != null)
+                {
+
+                    //    likestringValue = line.Substring(line.IndexOf("/ - ") + 3).Trim();
+                    likestringValue = line.Substring(line.IndexOf(".mp4 | ") + 7).Trim();
+                    // likeValue = double.Parse(likestringValue, NumberStyles.AllowDecimalPoint, CultureInfo.CreateSpecificCulture("de-DE"));
+                    likeValue = double.Parse(likestringValue, NumberStyles.AllowDecimalPoint, CultureInfo.CreateSpecificCulture("en-GB"));
+                    //  line = line.Remove(line.IndexOf("/ - "));
+                    line = line.Remove(line.IndexOf(".mp4 | ") + 4);
+                    //line = line.Substring(3);
+
+
+                    // uniquelist.ForEach()
+                    lg.Add(new LikeabilityQuellen(likeValue, line));
+
+
+
+                }
+
+                List<LikeabilityQuellen> uniquelist = lg.GroupBy(i => i.Link).Select(g => g.First()).ToList();
+
+                lgg = uniquelist.OrderBy(o => o.Likeability).ToList();
+                lgg.Reverse();
+
+                foreach (var file in lgg)
+                {
+                    filePath = lgg.Select(f => f.Link).ToArray();
+                }
+
+
+            }
+            return filePath;
+        }
+
+        private static List<string> GetAllVideosFromFolders()
+        {
+            string filepath = @"C:\Users\Agrre\Desktop\testproject";
+            string[] filePath;
+            List<string> lfn = new List<string>();
+            filePath = Directory.GetFiles(filepath, "*.mp4");
+            foreach (string file in filePath)
+            {
+                // lfn.Add(Path.GetFileNameWithoutExtension(file));
+                lfn.Add(Path.GetFileName(file));
+            }
+            //  fileNames = new DirectoryInfo(filePath).GetFiles().Select(o => o.Name).ToArray();
+            return lfn;
+        }
 
 
         private static void CreateBlankProjekt()
         {
             string projektDatei = "Slamdank1.wlmp";
             string projektName = "Slamdank1";
-           
+
 
             // INTRO AUSWÄHLEN
-            string[] filepath = GetAllVideosFromFolder();
-            int width = 1920;
-            int height = 1080;
-            double duration = 30.93;
+            //  string[] filepath = GetAllVideosFromFolder();
+
+            string[] filepath = GetLikeability();
+            Tuple<int, int> getValue = new Tuple<int, int>(GetFramesizeOfVideos(filepath, 0).Item1, GetFramesizeOfVideos(filepath, 0).Item2);
+            //int width = 1920;
+            //int height = 1080;
+            int width = getValue.Item1;
+            int height = getValue.Item2;
+
+            double duration = GetDurationOfVideos(filepath, 0);
             using (XmlWriter writer = XmlWriter.Create(projektDatei))
             {
                 writer.WriteStartDocument();
@@ -81,12 +231,11 @@ namespace GondoAssist_AutoVideo
             // Insert ExtentRefs id=1
             int extent4ID = MakeExtentRefForExtentRefs1(newDirectiory, letzteZahl, amountOfMediaItems);
 
-            string currentDirectory = Directory.GetCurrentDirectory();
-
-
+            //  string currentDirectory = Directory.GetCurrentDirectory();
             // Startet das Tag Program
-           // Tags.Program start = new Tags.Program();
-           // start.RunTags(projektDatei, currentDirectory);
+            // Tags.Program start = new Tags.Program();
+
+            // start.RunTags(projektDatei, currentDirectory);
         }
 
 
@@ -100,14 +249,20 @@ namespace GondoAssist_AutoVideo
 
         private static int MakeOneMediaItemsWithOneNode(string newDirectiory, int mediaItemID, int amountOfMediaItems, XDocument docY, string[] filepath)
         {
+
             int n = 1;
             int extentID = 5;
             bool ersterUmlauf = true;
-            int width = 640;
-            int height = 640;
-            double duration = 20.934000000000001;
+            //int width = 640;
+            //int height = 640;
+           // double duration = 20.934000000000001;
             while (n < filepath.Length)
             {
+                Tuple<int, int> getValue = new Tuple<int, int>(GetFramesizeOfVideos(filepath, n).Item1, GetFramesizeOfVideos(filepath, n).Item2);
+                int width = getValue.Item1;
+                int height = getValue.Item2;
+                double duration = GetDurationOfVideos(filepath, n);
+
 
                 mediaItemID++;
                 // Erstellt mit jedem Durchgang ein MediaItem
@@ -203,7 +358,7 @@ namespace GondoAssist_AutoVideo
 
             doc.Save(newDirectiory);
 
-         }
+        }
 
         private static void MakeThemeOperationLog(string newDirectiory)
         {
@@ -295,31 +450,7 @@ namespace GondoAssist_AutoVideo
 
         }
 
-        private static void CreateMediaClipXElement()
-        {
-            int width = 1920;
-            int height = 1080;
-            double duration = 30.93;
-            string filepath = "";
-            new XElement(new XElement("MediaItem", new XAttribute("id", 1), new XAttribute("filePath", filepath), new XAttribute("arWidth", width), new XAttribute("arHeight", height), new XAttribute("duration", duration), new XAttribute("songTitle", ""), new XAttribute("songArtist", ""), new XAttribute("songAlbum", ""), new XAttribute("songCopyrightUrl", ""), new XAttribute("songArtistUrl", ""), new XAttribute("songAudioFileUrl", ""), new XAttribute("stabilizationMode", 0), new XAttribute("mediaItemType", 1)));
 
-        }
-
-        private static void InsertTitleClipAndSave(int lastExtentRefNumber, string newDirectiory, string checkedFileName, int amountOfMediaItems)
-        {
-            XDocument doc = XDocument.Load(newDirectiory);
-            int n = 0;
-            while (n < amountOfMediaItems)
-            {
-                checkedFileName = getFileNameFromMediaItem(n, doc);
-
-                var createdTitleClips = CreateTitleClipElement(lastExtentRefNumber, checkedFileName);
-                doc.Root.Descendants("Extents").FirstOrDefault().AddFirst(createdTitleClips);
-                doc.Save(newDirectiory);
-                n++;
-                lastExtentRefNumber++;
-            }
-        }
 
 
         private static XElement CreateTitleClipElement(int idIterator, string fileName)
@@ -412,6 +543,32 @@ namespace GondoAssist_AutoVideo
             }
 
             return letzteZahl + 1;
+        }
+
+        private static void CreateMediaClipXElement()
+        {
+            int width = 1920;
+            int height = 1080;
+            double duration = 30.93;
+            string filepath = "";
+            new XElement(new XElement("MediaItem", new XAttribute("id", 1), new XAttribute("filePath", filepath), new XAttribute("arWidth", width), new XAttribute("arHeight", height), new XAttribute("duration", duration), new XAttribute("songTitle", ""), new XAttribute("songArtist", ""), new XAttribute("songAlbum", ""), new XAttribute("songCopyrightUrl", ""), new XAttribute("songArtistUrl", ""), new XAttribute("songAudioFileUrl", ""), new XAttribute("stabilizationMode", 0), new XAttribute("mediaItemType", 1)));
+
+        }
+
+        private static void InsertTitleClipAndSave(int lastExtentRefNumber, string newDirectiory, string checkedFileName, int amountOfMediaItems)
+        {
+            XDocument doc = XDocument.Load(newDirectiory);
+            int n = 0;
+            while (n < amountOfMediaItems)
+            {
+                checkedFileName = getFileNameFromMediaItem(n, doc);
+
+                var createdTitleClips = CreateTitleClipElement(lastExtentRefNumber, checkedFileName);
+                doc.Root.Descendants("Extents").FirstOrDefault().AddFirst(createdTitleClips);
+                doc.Save(newDirectiory);
+                n++;
+                lastExtentRefNumber++;
+            }
         }
         #endregion
 
